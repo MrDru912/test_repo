@@ -1,0 +1,42 @@
+lecture scenario on 3 nodes
+
+prelim requests:
+r1:
+p2->r1
+p1->r1 (p1->p2)
+
+r2:
+p2->r2
+p3->r2(p3->p2)
+
+r3:
+p1->r3
+p3->r3(p3->p1)
+
+p2 requests r2 = r2 granted to p2 cuz no cycles detected on r2 graph
+
+p1 requests r1 = cycle detected on r1, r1 not granted, request delayed
+
+p3 reqeusts r3 = cycle detected on r3, r3 not granted, request delayed
+
+p2 requests r1 = no cycles, r1 granted to p2
+
+p2 release r1 = r1 check delayed requests and finds rqeuest from p1, checks cycles. no cycles detected, r1 granted to p1
+
+p2 release r2 = no delayed requests to proceed with
+
+p1 request r3 = no cyles detected, r3 granted to p1
+
+p1 release r1
+
+p1 release r3 = r3 finds delayed request from p3, check cycles, grants r3 to p3
+
+p3 requests r2, no cycles detetcted, r2 granted to p3
+
+p3 release r2
+
+p3 release r3
+
+
+
+
