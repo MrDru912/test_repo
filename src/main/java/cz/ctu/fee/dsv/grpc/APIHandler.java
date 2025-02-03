@@ -55,7 +55,7 @@ public class APIHandler {
                     }
                 })
                 .get("/preliminary_request/{resource_id}", ctx -> {
-                    logger.info("Sending preliminary request to get {}. ip: {} port {}", ctx.pathParam("resource_id"), myNode.getMyIP(), myNode.getMyPort());
+                    logger.info("Sending preliminary request from {} to get {}.", myNode.getAddress(), ctx.pathParam("resource_id"));
                     myNode.sendPreliminaryRequest(ctx.pathParam("resource_id"));
                 })
                 .get("/request_resource/{resource_id}", ctx -> {

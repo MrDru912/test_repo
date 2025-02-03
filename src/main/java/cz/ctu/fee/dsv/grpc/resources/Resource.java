@@ -160,7 +160,7 @@ public class Resource {
         }
         this.setLastPreliminaryRequesterId(requesterId);
 
-        logger.info("Preliminary request was processed and dependency graph was updated.\n{}", this.graph.getStringGraph());
+        logger.info("Preliminary request from {} was processed and dependency graph was updated.\n{}", requesterId, this.graph.getStringGraph());
 
     }
 

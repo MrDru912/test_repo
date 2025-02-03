@@ -134,33 +134,42 @@ public class NodeCommandsImpl implements NodeCommands{
 
     @Override
     public void preliminaryRequest(RequestResourceMessageProto preliminaryRequestMessageProto) {
-        logger.info("Preliminary request. {} {}.", myNode.getMyIP(), myNode.getMyPort());
         if (preliminaryRequestMessageProto.getResourceId().equals(this.myNode.getResource().getId())) {
+            logger.info("Preliminary request got on {} from {} for {}.",
+                    myNode.getAddress(), ProtobufMapper.fromProtoToAddress(preliminaryRequestMessageProto.getRequesterAddress()),
+                    preliminaryRequestMessageProto.getResourceId());
             myNode.processPreliminaryRequest(preliminaryRequestMessageProto);
         } else {
+            logger.info("Preliminary request got on {} from {} for {}. Redirecting to the next node",
+                    myNode.getAddress(), ProtobufMapper.fromProtoToAddress(preliminaryRequestMessageProto.getRequesterAddress()),
+                    preliminaryRequestMessageProto.getResourceId());
             this.myNode.getCommHub().getNext().preliminaryRequest(preliminaryRequestMessageProto);
         }
     }
 
     @Override
     public void requestResource(RequestResourceMessageProto requestResourceMessageProto) {
-        logger.info("Request resource. Current node: ip: {}; port: {}, resourceId: {}. requested resource id: {}",
-                myNode.getMyIP(), myNode.getMyPort(), myNode.getResource().getId(), requestResourceMessageProto.getResourceId());
         if (requestResourceMessageProto.getResourceId().equals(this.myNode.getResource().getId())){
+            logger.info("Request resource. Current node: ip: {}; port: {}, resourceId: {}. requested resource id: {}",
+                    myNode.getMyIP(), myNode.getMyPort(), myNode.getResource().getId(), requestResourceMessageProto.getResourceId());
             myNode.requestResource(requestResourceMessageProto);
         } else {
+            logger.info("Request resource. Current node: ip: {}; port: {}, resourceId: {}. requested resource id: {}. Redirecting to the next node.",
+                    myNode.getMyIP(), myNode.getMyPort(), myNode.getResource().getId(), requestResourceMessageProto.getResourceId());
             this.myNode.getCommHub().getNext().requestResource(requestResourceMessageProto);
         }
     }
 
     @Override
     public void acquireResource(AcquireMessageProto acquireMessageProto) {
-        logger.info("Acquire resource. Current node: ip {}; port {}; resourceId {}. Granted to: {}",
-                myNode.getMyIP(), myNode.getMyPort(), myNode.getResource().getId(), ProtobufMapper.fromProtoToAddress(acquireMessageProto.getRequesterAddress()));
         if (this.myNode.getAddress().hostname.equals(acquireMessageProto.getRequesterAddress().getHostname())
         && this.myNode.getAddress().port == acquireMessageProto.getRequesterAddress().getPort()) {
             this.myNode.acquireResource(acquireMessageProto);
+            logger.info("Acquire resource. Current node: {}; resourceId {}. Granted to: {}.",
+                    myNode.getAddress(), myNode.getResource().getId(), ProtobufMapper.fromProtoToAddress(acquireMessageProto.getRequesterAddress()));
         } else {
+            logger.info("Acquire resource. Current node: {}; resourceId {}. Granted to: {}. Redirecting to the next node",
+                    myNode.getAddress(), myNode.getResource().getId(), ProtobufMapper.fromProtoToAddress(acquireMessageProto.getRequesterAddress()));
             this.myNode.getCommHub().getNext().acquireResource(acquireMessageProto);
         }
     }
@@ -168,6 +177,7 @@ public class NodeCommandsImpl implements NodeCommands{
     @Override
     public void resourceWasReleased(ResourceProto resourceProto) {
         if (this.myNode.getResource().getId().equals(resourceProto.getId())){
+            logger.info("Resource was released request on {}.", myNode.getAddress());
             this.myNode.processReleaseResource(resourceProto);
         } else {
             logger.info("Resource was released request on {}. Redirecting to the next node", myNode.getAddress());
