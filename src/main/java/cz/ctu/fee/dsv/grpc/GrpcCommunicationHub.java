@@ -16,7 +16,7 @@ public class GrpcCommunicationHub {
     private DSNeighbours actNeighbours = null;
     private Address myAddress = null;
     private MessageReceiver myMessageReceiver = null;
-
+    private Node node = null;
     private final Map<String, ManagedChannel> channels = new ConcurrentHashMap<>();
 
     public boolean isAlive() {
@@ -30,6 +30,7 @@ public class GrpcCommunicationHub {
     private boolean isAlive = true;
 
     public GrpcCommunicationHub (Node node) {
+        this.node = node;
         this.myAddress = node.getAddress();
         this.actNeighbours = node.getNeighbours();
         this.myMessageReceiver = node.getMessageReceiver();

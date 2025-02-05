@@ -9,22 +9,23 @@ package dsvcmds;
 import "google/protobuf/empty.proto";
 
 service Commands {
-  rpc chngNNext (AddressProto) returns (google.protobuf.Empty) {}
-  rpc chngNext (AddressProto) returns (google.protobuf.Empty) {}
+  rpc chngNNext (AddressProto) returns (TimeProto) {}
+  rpc chngNext (AddressProto) returns (TimeProto) {}
   rpc chngPrev (AddressProto) returns (AddressProto) {}
-  rpc nodeMissing (AddressProto) returns (google.protobuf.Empty) {}
-  rpc hello (google.protobuf.Empty) returns (google.protobuf.Empty){}
+  rpc nodeMissing (AddressProto) returns (TimeProto) {}
+  rpc hello (google.protobuf.Empty) returns (TimeProto){}
   rpc join (AddressProto) returns(DSNeighboursProto){}
-  rpc chngNNextOfPrev(AddressProto) returns(google.protobuf.Empty) {}
-  rpc preliminaryRequest(RequestResourceMessageProto) returns(google.protobuf.Empty) {}
-  rpc requestResource(RequestResourceMessageProto) returns(google.protobuf.Empty) {}
-  rpc acquireResource(AcquireMessageProto) returns(google.protobuf.Empty) {}
-  rpc resourceWasReleased(ResourceProto) returns(google.protobuf.Empty) {}
+  rpc chngNNextOfPrev(AddressProto) returns(TimeProto) {}
+  rpc preliminaryRequest(RequestResourceMessageProto) returns(TimeProto) {}
+  rpc requestResource(RequestResourceMessageProto) returns(TimeProto) {}
+  rpc acquireResource(AcquireMessageProto) returns(TimeProto) {}
+  rpc resourceWasReleased(ResourceProto) returns(TimeProto) {}
 }
 
 message AddressProto {
   string hostname = 1;
   int32 port = 2;
+  int32 time = 3;
 }
 
 message DSNeighboursProto {
@@ -32,10 +33,12 @@ message DSNeighboursProto {
   AddressProto nnext = 2;
   AddressProto prev = 3;
   AddressProto leader = 4;
+  int32 time = 5;
 }
 
 message ResourceIdProto {
   string resourceId = 1;
+  int32 time = 2;
 }
 
 //message PreliminaryRequestMessageProto {
@@ -47,14 +50,21 @@ message ResourceIdProto {
 message ResourceProto {
   string id = 1;
   string data = 2;
+  int32 time = 3;
 }
 
 message RequestResourceMessageProto {
   string resourceId = 1;
   AddressProto requesterAddress = 2;
+  int32 time = 3;
 }
 
 message AcquireMessageProto {
   optional ResourceProto resource = 1;
   AddressProto requesterAddress = 2;
+  int32 time = 3;
+}
+
+message TimeProto{
+  int32 time = 1;
 }

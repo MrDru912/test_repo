@@ -31,21 +31,25 @@ public class APIHandler {
                     ctx.result("Delay was set up. ip: " + myNode.getMyIP() + " port: " + myNode.getMyPort()+"\n");
                 })
                 .get("/join/{other_node_ip}/{other_node_port}", ctx -> {
+                    myNode.sleepForDelay();
                     logger.info("Joining node: {}: {}", ctx.pathParam("other_node_ip"), ctx.pathParam("other_node_port"));
                     myNode.join(ctx.pathParam("other_node_ip"), Integer.parseInt(ctx.pathParam("other_node_port")));
                     ctx.result("Tried to join to: " + ctx.pathParam("other_node_ip") + " " + ctx.pathParam("other_node_port") + "\n");
                 })
                 .get("/leave", ctx -> {
+                    myNode.sleepForDelay();
                     logger.info("Node is leaving. ip: {} port: {}", myNode.getMyIP(), myNode.getMyPort());
                     myNode.leave();
                     ctx.result("Node left. ip: " + myNode.getMyIP() + " port: " + myNode.getMyPort()+"\n");
                 })
                 .get("/kill", ctx -> {
+                    myNode.sleepForDelay();
                     logger.info("Node is being killed. ip: {} port: {}", myNode.getMyIP(), myNode.getMyPort());
                     myNode.kill();
                     ctx.result("Node was killed. ip: " + myNode.getMyIP() + " port: " + myNode.getMyPort()+"\n");
                 })
                 .get("/revive", ctx -> {
+                    myNode.sleepForDelay();
                     logger.info("Node is being revived. ip: {} port: {}", myNode.getMyIP(), myNode.getMyPort());
                     try {
                         myNode.revive();
@@ -55,16 +59,19 @@ public class APIHandler {
                     }
                 })
                 .get("/preliminary_request/{resource_id}", ctx -> {
+                    myNode.sleepForDelay();
                     logger.info("Sending preliminary request from {} to get {}.", myNode.getAddress(), ctx.pathParam("resource_id"));
                     myNode.sendPreliminaryRequest(ctx.pathParam("resource_id"));
                 })
                 .get("/request_resource/{resource_id}", ctx -> {
+                    myNode.sleepForDelay();
                     logger.info("Sending request to get {}. ip: {} port: {}", ctx.pathParam("resource_id"), myNode.getMyIP(), myNode.getMyPort());
                     myNode.requestResource(ctx.pathParam("resource_id"));
                 })
                 .get("/release_resource/{resource_id}", ctx -> {
                     logger.info("Sending release source {}. ip: {} port: {}", ctx.pathParam("resource_id"), myNode.getMyIP(), myNode.getMyPort());
                     try{
+                        myNode.sleepForDelay();
                         myNode.releaseResource(ctx.pathParam("resource_id"));
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -73,6 +80,7 @@ public class APIHandler {
                 .get("/send_hello_next", ctx -> {
                     logger.info("Sending hello to next node");
                     try {
+                        myNode.sleepForDelay();
                         myNode.sendHelloToNext();
                         ctx.result("Hello sent\n");
                     } catch (KilledNodeActsAsClientException e){
@@ -80,6 +88,7 @@ public class APIHandler {
                     }
                 })
                 .get("/get_status", ctx -> {
+                    myNode.sleepForDelay();
                     logger.info("Getting status of this node");
                     myNode.printStatus();
                     ctx.result(myNode.getStatus() + "\n");

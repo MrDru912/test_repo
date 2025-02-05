@@ -6,7 +6,6 @@ public class Address implements Comparable<Address>, Serializable {
     public String hostname;
     public Integer port;
 
-
     public Address () {
         this("127.0.0.1", 2010);
     }

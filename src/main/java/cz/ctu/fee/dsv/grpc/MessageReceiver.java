@@ -4,7 +4,9 @@ import com.google.protobuf.Empty;
 import cz.ctu.fee.dsv.*;
 import cz.ctu.fee.dsv.grpc.base.NodeCommands;
 import cz.ctu.fee.dsv.grpc.base.NodeCommandsImpl;
+import cz.ctu.fee.dsv.grpc.exceptions.NodeAlreadyJointException;
 import cz.ctu.fee.dsv.grpc.mappers.ProtobufMapper;
+import cz.ctu.fee.dsv.grpc.utils.Utils;
 import io.grpc.stub.StreamObserver;
 
 public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
@@ -24,6 +26,7 @@ public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
     @Override
     public void join(AddressProto protoAddr,
                              io.grpc.stub.StreamObserver<cz.ctu.fee.dsv.DSNeighboursProto> responseObserver) {
+        Utils.updateTimeOnReceive(protoAddr.getTime(), this.myNode);
         DSNeighboursProto reply = nodeCommands.join(protoAddr);
         responseObserver.onNext(reply);
         responseObserver.onCompleted();
@@ -31,30 +34,33 @@ public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
 
     @Override
     public void chngNNextOfPrev(AddressProto addrProto,
-                          StreamObserver<Empty> responseObserver) {
-        nodeCommands.chngNNextOfPrev(addrProto);
+                          StreamObserver<TimeProto> responseObserver) {
+        Utils.updateTimeOnReceive(addrProto.getTime(), this.myNode);
+        TimeProto timeProto = nodeCommands.chngNNextOfPrev(addrProto);
         // Send an empty response
-        responseObserver.onNext(Empty.getDefaultInstance());
+        responseObserver.onNext(timeProto);
         // Signal that the call is complete
         responseObserver.onCompleted();
     }
 
     @Override
     public void chngNNext(AddressProto addrProto,
-                          StreamObserver<Empty> responseObserver) {
-        nodeCommands.chngNNext(addrProto);
+                          StreamObserver<TimeProto> responseObserver) {
+        Utils.updateTimeOnReceive(addrProto.getTime(), this.myNode);
+        TimeProto timeProto = nodeCommands.chngNNext(addrProto);
         // Send an empty response
-        responseObserver.onNext(Empty.getDefaultInstance());
+        responseObserver.onNext(timeProto);
         // Signal that the call is complete
         responseObserver.onCompleted();
     }
 
     @Override
     public void chngNext(AddressProto addrProto,
-                          StreamObserver<Empty> responseObserver) {
-        nodeCommands.chngNext(addrProto);
+                          StreamObserver<TimeProto> responseObserver) {
+        Utils.updateTimeOnReceive(addrProto.getTime(), this.myNode);
+        TimeProto timeProto = nodeCommands.chngNext(addrProto);
         // Send an empty response
-        responseObserver.onNext(Empty.getDefaultInstance());
+        responseObserver.onNext(timeProto);
         // Signal that the call is complete
         responseObserver.onCompleted();
     }
@@ -63,6 +69,7 @@ public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
     @Override
     public void chngPrev(AddressProto addrProto,
             io.grpc.stub.StreamObserver<cz.ctu.fee.dsv.AddressProto> responseObserver) {
+        Utils.updateTimeOnReceive(addrProto.getTime(), this.myNode);
         AddressProto reply = nodeCommands.chngPrev(addrProto);
         responseObserver.onNext(reply);
         responseObserver.onCompleted();
@@ -71,10 +78,11 @@ public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
 
 
     @Override
-    public void nodeMissing(AddressProto addrProto, StreamObserver<Empty> responseObserver) {
-        nodeCommands.nodeMissing(addrProto);
+    public void nodeMissing(AddressProto addrProto, StreamObserver<TimeProto> responseObserver) {
+        Utils.updateTimeOnReceive(addrProto.getTime(), this.myNode);
+        TimeProto timeProto = nodeCommands.nodeMissing(addrProto);
         // Send an empty response
-        responseObserver.onNext(Empty.getDefaultInstance());
+        responseObserver.onNext(timeProto);
         // Signal that the call is complete
         responseObserver.onCompleted();
     }
@@ -88,40 +96,46 @@ public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
 
 
     @Override
-    public void hello(Empty request, StreamObserver<Empty> responseObserver) {
+    public void hello(Empty request, StreamObserver<TimeProto> responseObserver) {
+//        this.updateTimeOnReceive(addrProto.getTime()); #TODO add time message
+
 //        // Perform any logic you need (e.g., logging, updating state)
-        nodeCommands.hello();
+        TimeProto timeProto = nodeCommands.hello();
         // Send an empty response
-        responseObserver.onNext(Empty.getDefaultInstance());
+        responseObserver.onNext(timeProto);
         // Signal that the call is complete
         responseObserver.onCompleted();
     }
 
     @Override
-    public void preliminaryRequest(RequestResourceMessageProto requestMessageProto, StreamObserver<Empty> responseObserver) {
-        nodeCommands.preliminaryRequest(requestMessageProto);
-        responseObserver.onNext(Empty.getDefaultInstance());
+    public void preliminaryRequest(RequestResourceMessageProto requestMessageProto, StreamObserver<TimeProto> responseObserver) {
+        Utils.updateTimeOnReceive(requestMessageProto.getTime(), this.myNode);
+        TimeProto timeProto = nodeCommands.preliminaryRequest(requestMessageProto);
+        responseObserver.onNext(timeProto);
         responseObserver.onCompleted();
     }
 
     @Override
-    public void requestResource(RequestResourceMessageProto requestMessageProto, StreamObserver<Empty> responseObserver) {
-        nodeCommands.requestResource(requestMessageProto);
-        responseObserver.onNext(Empty.getDefaultInstance());
+    public void requestResource(RequestResourceMessageProto requestMessageProto, StreamObserver<TimeProto> responseObserver) {
+        Utils.updateTimeOnReceive(requestMessageProto.getTime(), this.myNode);
+        TimeProto timeProto = nodeCommands.requestResource(requestMessageProto);
+        responseObserver.onNext(timeProto);
         responseObserver.onCompleted();
     }
 
     @Override
-    public void resourceWasReleased(ResourceProto resourceProto, StreamObserver<Empty> responseObserver) {
-        nodeCommands.resourceWasReleased(resourceProto);
-        responseObserver.onNext(Empty.getDefaultInstance());
+    public void resourceWasReleased(ResourceProto resourceProto, StreamObserver<TimeProto> responseObserver) {
+        Utils.updateTimeOnReceive(resourceProto.getTime(), this.myNode);
+        TimeProto timeProto = nodeCommands.resourceWasReleased(resourceProto);
+        responseObserver.onNext(timeProto);
         responseObserver.onCompleted();
     }
 
     @Override
-    public void acquireResource(AcquireMessageProto acquireMessageProto, StreamObserver<Empty> responseObserver) {
-        nodeCommands.acquireResource(acquireMessageProto);
-        responseObserver.onNext(Empty.getDefaultInstance());
+    public void acquireResource(AcquireMessageProto acquireMessageProto, StreamObserver<TimeProto> responseObserver) {
+        Utils.updateTimeOnReceive(acquireMessageProto.getTime(), this.myNode);
+        TimeProto timeProto = nodeCommands.acquireResource(acquireMessageProto);
+        responseObserver.onNext(timeProto);
         responseObserver.onCompleted();
     }
 

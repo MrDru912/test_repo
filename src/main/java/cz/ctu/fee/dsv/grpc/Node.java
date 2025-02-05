@@ -45,6 +45,7 @@ public class Node implements Runnable {
     private ConsoleHandler myConsoleHandler;
     private APIHandler myAPIHandler;
 
+    private int time = 0;
     private int delay = 0;
 
     boolean repairInProgress = false;
@@ -136,7 +137,8 @@ public class Node implements Runnable {
                 "myPort:'"+myPort+"', " +
                 "resource:"+resource.getId()+", " +
                 "resourceIsFree:"+this.resource.isResourceFree()+", " +
-                "nodeStatus:" + this.nodeStatus.toString() +
+                "nodeStatus:" + this.nodeStatus.toString() +", "+
+                "isAlive:"+(getCommHub() == null?"null": getCommHub().isAlive())+
 //                "otherNodeIP:'"+otherNodeIP+"', " +
 //                "otherNodePort:'"+otherNodePort+
                 "']";
@@ -207,15 +209,15 @@ public class Node implements Runnable {
         if (!myCommHub.isAlive()) throw new KilledNodeActsAsClientException("Node is not alive. Try to revive it.");
         try {
             CommandsGrpc.CommandsBlockingStub tmpNode = myCommHub.getGrpcProxy(new Address(otherNodeIP, otherNodePort));
-            myNeighbours = ProtobufMapper.fromProtoToDSNeighbours(
-                    tmpNode.join(ProtobufMapper.AddressToProto(myAddress))
-            );
+            DSNeighboursProto response = tmpNode.join(ProtobufMapper.AddressToProto(myAddress, getLamportTime()));
+            DSNeighbours neighboursResponse = ProtobufMapper.fromProtoToDSNeighbours(response);
+            myNeighbours = neighboursResponse;
             myCommHub.setActNeighbours(myNeighbours);
         } catch (Exception e) {
             e.printStackTrace();
             // TODO Exception -> exit
         }
-        logger.info("Neighbours after JOIN " + myNeighbours);
+        logger.info("{} Neighbours after JOIN {}", Utils.formatTime(this.time), myNeighbours);
     }
 
     public void stopGrpc() {
@@ -232,7 +234,7 @@ public class Node implements Runnable {
             repairInProgress = true;
             {
                 try {
-                    myMessageReceiver.getNodeCommands().nodeMissing(ProtobufMapper.AddressToProto(missingNode));
+                    myMessageReceiver.getNodeCommands().nodeMissing(ProtobufMapper.AddressToProto(missingNode, getLamportTime()));
                 } catch (Exception e) {
                     // this should not happen
                     e.printStackTrace();
@@ -245,7 +247,6 @@ public class Node implements Runnable {
     }
 
     public void sendHelloToNext() throws KilledNodeActsAsClientException {
-        sleepForDelay();
         logger.info("Sending Hello to my Next ...");
         if (!myCommHub.isAlive()) throw new KilledNodeActsAsClientException("Node is not alive. Try to revive it.");
         try {
@@ -257,13 +258,13 @@ public class Node implements Runnable {
 
     public void resetNodeInTopology() {
         // reset info - start as I am only node
-        logger.info("Reseting node " + this.getAddress() + " in topology");
+        logger.info("{} Reseting node {} in topology", Utils.formatTime(this.time), this.getAddress());
         myNeighbours = new DSNeighbours(myAddress);
     }
 
     public void leave(){
         try {
-            this.myMessageReceiver.getNodeCommands().nodeLeft(ProtobufMapper.AddressToProto(this.myAddress));
+            this.myMessageReceiver.getNodeCommands().nodeLeft(ProtobufMapper.AddressToProto(this.myAddress, getLamportTime()));
             this.resetNodeInTopology();
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -283,23 +284,27 @@ public class Node implements Runnable {
             startGrpc();
             this.myCommHub.setAlive(true);
             Address nodeToJoinWith = myNeighbours.prev;
+//            repairTopology(myAddress); TODO
             join(nodeToJoinWith.hostname, nodeToJoinWith.port);
         } catch (KilledNodeActsAsClientException e){ /* Will never happen */
-            logger.info("Failed to revive node: " + e.getMessage());
+            logger.info("{} Failed to revive node: {}", Utils.formatTime(this.time), e.getMessage());
         }
         catch (Exception e){
-            logger.error("Failed to revive node: " + e.getMessage());
+            logger.error("{} Failed to revive node: {}", Utils.formatTime(this.time), e.getMessage());
             throw e;
         }
     }
 
-    public void sendPreliminaryRequest(String resourceId) throws InterruptedException {
-        sleepForDelay();
-        this.myCommHub.getGrpcProxy(this.myAddress)
-                .preliminaryRequest(RequestResourceMessageProto.newBuilder()
-                        .setResourceId(resourceId)
-                        .setRequesterAddress(ProtobufMapper.AddressToProto(this.myAddress))
-                        .build());
+    public void sendPreliminaryRequest(String resourceId) {
+        try{
+            this.myCommHub.getGrpcProxy(this.myAddress)
+                    .preliminaryRequest(RequestResourceMessageProto.newBuilder()
+                            .setResourceId(resourceId)
+                            .setRequesterAddress(ProtobufMapper.AddressToProto(this.myAddress, getLamportTime()))
+                            .build());
+        } catch (Exception e) {
+            repairTopology(myNeighbours.next);
+        }
     }
 
     public void processPreliminaryRequest(RequestResourceMessageProto preliminaryRequestMessageProto) {
@@ -313,9 +318,13 @@ public class Node implements Runnable {
                     .setRequesterAddress(requestResourceMessageProto.getRequesterAddress())
                     .build();
             /* sending message with the granted resource to the requester */
-            this.myCommHub.getNext().acquireResource(messageWithGrant);
+            try {
+                this.myCommHub.getNext().acquireResource(messageWithGrant);
+            } catch (Exception e){
+                repairTopology(myNeighbours.next);
+            }
         } else {
-            logger.info("Resource was not granted on request from {}", requestResourceMessageProto.getRequesterAddress());
+            logger.info("{} Resource was not granted on request from {}", Utils.formatTime(this.time), requestResourceMessageProto.getRequesterAddress());
         }
     }
 
@@ -324,25 +333,29 @@ public class Node implements Runnable {
         this.getCommHub().getGrpcProxy(this.myAddress).requestResource(RequestResourceMessageProto
                 .newBuilder()
                 .setResourceId(resourceId)
-                .setRequesterAddress(ProtobufMapper.AddressToProto(this.myAddress))
+                .setRequesterAddress(ProtobufMapper.AddressToProto(this.myAddress, getLamportTime()))
                 .build());
     }
 
     public void releaseResource(String resourceId) {
         Resource resourceForRelease =  this.grantedResources.get(resourceId);
         this.grantedResources.remove(resourceId);
-        this.myCommHub.getNext()
-                .resourceWasReleased(ResourceProto.newBuilder()
-                        .setId(resourceForRelease.getId())
-                        .setData(resourceForRelease.getData())
-                        .build());
+        try{
+            this.myCommHub.getNext()
+                    .resourceWasReleased(ResourceProto.newBuilder()
+                            .setId(resourceForRelease.getId())
+                            .setData(resourceForRelease.getData())
+                            .build());
+        } catch (Exception e){
+            repairTopology(myNeighbours.next);
+        }
     }
 
     public void processReleaseResource(ResourceProto resourceProto){
-        logger.info("Processing resource release on {}", this.getAddress());
+        logger.info("{} Processing resource release on {}", Utils.formatTime(this.time), this.getAddress());
 
         RequestResourceMessageProto delayedRequest = this.resource.processReleasedResource(resourceProto);
-        logger.info("Graph after release: \n" + this.resource.getGraph().getStringGraph());
+        logger.info("{} Graph after release: \n{}", Utils.formatTime(this.time), this.resource.getGraph().getStringGraph());
 
         if (delayedRequest != null) {
             this.requestResource(delayedRequest);
@@ -350,7 +363,7 @@ public class Node implements Runnable {
     }
 
     public void acquireResource(AcquireMessageProto acquireMessageProto){
-        logger.info(this.getAddress()+" acquired resource " + acquireMessageProto.getResource().getId());
+        logger.info("{} {} acquired resource {}",Utils.formatTime(this.time), this.getAddress(), acquireMessageProto.getResource().getId());
         this.getGrantedResources().put(
                 acquireMessageProto.getResource().getId(),
                 new Resource(
@@ -392,6 +405,11 @@ public class Node implements Runnable {
         }
     }
 
+    public int getLamportTime() {
+        int newTime = this.getTime() + 1;
+        this.setTime(newTime);  // Actually update the stored time
+        return newTime;
+    }
 
     public HashMap<String, Resource> getGrantedResources() {
         return grantedResources;
@@ -452,6 +470,14 @@ public class Node implements Runnable {
 
     public void setStatus(NodeStatus nodeStatus) {
         this.nodeStatus = nodeStatus;
+    }
+
+    public int getTime() {
+        return time;
+    }
+
+    public void setTime(int time) {
+        this.time = time;
     }
 
     public static void main(String[] args) {
