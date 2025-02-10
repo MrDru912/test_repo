@@ -25,7 +25,7 @@ public class NodeCommandsImpl implements NodeCommands{
         logger.info("{} JOIN was called ...", Utils.formatTime(this.myNode.getTime()));
         if (addr.compareTo(myNode.getAddress()) == 0) {
             logger.info("{} I am the first", Utils.formatTime(this.myNode.getTime()));
-            return ProtobufMapper.DSNeighboursToProto(myNode.getNeighbours(), this.myNode.getLamportTime());
+            return ProtobufMapper.DSNeighboursToProto(myNode.getNeighbours());
         } else {
             Address joiningNodeAddr = ProtobufMapper.fromProtoToAddress(protoAddr);
             logger.info("{} {} is joining ...", Utils.formatTime(this.myNode.getTime()), joiningNodeAddr);
@@ -47,51 +47,45 @@ public class NodeCommandsImpl implements NodeCommands{
 //            }
 
             // to my (initial) next send msg ChPrev to addr
-            AddressProto addressProto = myNode.getCommHub().getNext().chngPrev(protoAddr);
-            Utils.updateTimeOnReceive(addressProto.getTime(), this.myNode);
+            myNode.getCommHub().getNext().chngPrev(protoAddr);
             // to my (initial) prev send msg ChNNext addr
-            TimeProto timeProto = myNode.getCommHub().getGrpcProxy(myInitialPrev).chngNNext(protoAddr);
-            Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
+            myNode.getCommHub().getGrpcProxy(myInitialPrev).chngNNext(protoAddr);
             tmpNeighbours.nnext = myNeighbours.nnext;
             // handle myself
             myNeighbours.nnext = myInitialNext;
             myNeighbours.next = addr;
-            return ProtobufMapper.DSNeighboursToProto(tmpNeighbours, this.myNode.getLamportTime());
+            return ProtobufMapper.DSNeighboursToProto(tmpNeighbours);
         }
     }
 
 
     @Override
-    public TimeProto chngNNext(AddressProto addrProto) {
+    public void chngNNext(AddressProto addrProto) {
         logger.info("{} ChngNNext was called ...", Utils.formatTime(this.myNode.getTime()));
         myNode.getNeighbours().nnext = ProtobufMapper.fromProtoToAddress(addrProto);
-        return TimeProto.newBuilder().setTime(this.myNode.getLamportTime()).build();
     }
 
     @Override
-    public TimeProto chngNext(AddressProto addrProto) {
+    public void chngNext(AddressProto addrProto) {
         logger.info("{} chngNext was called ...", Utils.formatTime(this.myNode.getTime()));
         myNode.getNeighbours().next = ProtobufMapper.fromProtoToAddress(addrProto);
-        return TimeProto.newBuilder().setTime(this.myNode.getLamportTime()).build();
     }
 
     @Override
     public AddressProto chngPrev(AddressProto addrProto) {
         logger.info("{} ChngPrev was called ...", Utils.formatTime(this.myNode.getTime()));
         myNode.getNeighbours().prev = ProtobufMapper.fromProtoToAddress(addrProto);
-        return ProtobufMapper.AddressToProto(myNode.getNeighbours().next, this.myNode.getLamportTime());
+        return ProtobufMapper.AddressToProto(myNode.getNeighbours().next);
     }
 
     @Override
-    public TimeProto chngNNextOfPrev(AddressProto addrProto) {
+    public void chngNNextOfPrev(AddressProto addrProto) {
         logger.info("{} chngNNextOfPrev was called ...", Utils.formatTime(this.myNode.getTime()));
-        TimeProto timeProto = myNode.getCommHub().getPrev().chngNNext(addrProto);
-        Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
-        return TimeProto.newBuilder().setTime(this.myNode.getLamportTime()).build();
+        myNode.getCommHub().getPrev().chngNNext(addrProto);
     }
 
     @Override
-    public TimeProto nodeMissing(AddressProto addrProto) {
+    public void nodeMissing(AddressProto addrProto) {
         Address addr = ProtobufMapper.fromProtoToAddress(addrProto);
         logger.info("{} NodeMissing was called with {}", Utils.formatTime(this.myNode.getTime()), addr);
         if (addr.compareTo(myNode.getNeighbours().next) == 0) {
@@ -100,67 +94,50 @@ public class NodeCommandsImpl implements NodeCommands{
             // to my nnext send msg ChPrev with myaddr -> my nnext = next
             myNeighbours.next = myNeighbours.nnext;
             myNeighbours.nnext = ProtobufMapper.fromProtoToAddress(
-                    myNode.getCommHub().getNNext().chngPrev(ProtobufMapper.AddressToProto(myNode.getAddress(), this.myNode.getLamportTime()))
+                    myNode.getCommHub().getNNext().chngPrev(ProtobufMapper.AddressToProto(myNode.getAddress()))
             );
             // to my prev send msg ChNNext to my.next
-            TimeProto timeProto = myNode.getCommHub().getPrev().chngNNext(ProtobufMapper.AddressToProto(myNeighbours.next, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
+            myNode.getCommHub().getPrev().chngNNext(ProtobufMapper.AddressToProto(myNeighbours.next));
             logger.info("{} NodeMissing DONE", Utils.formatTime(this.myNode.getTime()));
         } else {
             // send to next node
-            TimeProto timeProto = myNode.getCommHub().getNext().nodeMissing(addrProto);
-            Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
+            myNode.getCommHub().getNext().nodeMissing(addrProto);
         }
-        return TimeProto.newBuilder().setTime(this.myNode.getLamportTime()).build();
     }
 
-    public TimeProto nodeLeft(AddressProto addrProto) {
+    public void nodeLeft(AddressProto addrProto) {
         Address addr = ProtobufMapper.fromProtoToAddress(addrProto);
         logger.info("{} NodeLeft was called with {}", Utils.formatTime(this.myNode.getTime()),addr);
         DSNeighbours myNeighbours = myNode.getNeighbours();
         /* 2 nodes cycle */
         if (myNode.getNeighbours().prev.compareTo(myNode.getNeighbours().next) == 0) {
-            TimeProto timeProto = myNode.getCommHub().getPrev().chngNext(ProtobufMapper.AddressToProto(myNeighbours.next, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
-            AddressProto addressProto = myNode.getCommHub().getPrev().chngPrev(ProtobufMapper.AddressToProto(myNeighbours.next, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(addressProto.getTime(), this.myNode);
+            myNode.getCommHub().getPrev().chngNext(ProtobufMapper.AddressToProto(myNeighbours.next));
+            myNode.getCommHub().getPrev().chngPrev(ProtobufMapper.AddressToProto(myNeighbours.next));
         }
         /* 3 nodes cycle */
         else if (myNode.getNeighbours().prev.compareTo(myNode.getNeighbours().nnext) == 0) {
-            TimeProto timeProto = myNode.getCommHub().getNext().chngNNext(ProtobufMapper.AddressToProto(myNeighbours.next, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
+            myNode.getCommHub().getNext().chngNNext(ProtobufMapper.AddressToProto(myNeighbours.next));
 
-            AddressProto addressProto = myNode.getCommHub().getNext().chngPrev(ProtobufMapper.AddressToProto(myNeighbours.prev, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(addressProto.getTime(), this.myNode);
-
-            timeProto = myNode.getCommHub().getPrev().chngNext(ProtobufMapper.AddressToProto(myNeighbours.next, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
-
-            timeProto = myNode.getCommHub().getPrev().chngNNext(ProtobufMapper.AddressToProto(myNeighbours.prev, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
+             myNode.getCommHub().getNext().chngPrev(ProtobufMapper.AddressToProto(myNeighbours.prev));
+             myNode.getCommHub().getPrev().chngNext(ProtobufMapper.AddressToProto(myNeighbours.next));
+             myNode.getCommHub().getPrev().chngNNext(ProtobufMapper.AddressToProto(myNeighbours.prev));
         }
         /* more than 3 nodes cycle */
         else {
-            TimeProto timeProto = myNode.getCommHub().getPrev().chngNext(ProtobufMapper.AddressToProto(myNeighbours.next, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
+            myNode.getCommHub().getPrev().chngNext(ProtobufMapper.AddressToProto(myNeighbours.next));
 
-            timeProto = myNode.getCommHub().getPrev().chngNNext(ProtobufMapper.AddressToProto(myNeighbours.nnext, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
+            myNode.getCommHub().getPrev().chngNNext(ProtobufMapper.AddressToProto(myNeighbours.nnext));
 
-            AddressProto addressProto = myNode.getCommHub().getNext().chngPrev(ProtobufMapper.AddressToProto(myNeighbours.prev, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(addressProto.getTime(), this.myNode);
+            myNode.getCommHub().getNext().chngPrev(ProtobufMapper.AddressToProto(myNeighbours.prev));
 
-            timeProto = myNode.getCommHub().getPrev().chngNNextOfPrev(ProtobufMapper.AddressToProto(myNeighbours.next, this.myNode.getLamportTime()));
-            Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
+            myNode.getCommHub().getPrev().chngNNextOfPrev(ProtobufMapper.AddressToProto(myNeighbours.next));
         }
         logger.info("{} NodeMissing DONE" ,Utils.formatTime(this.myNode.getTime()));
-        return TimeProto.newBuilder().setTime(this.myNode.getLamportTime()).build();
     }
 
     @Override
-    public TimeProto hello() {
+    public void hello() {
         logger.info("{} Hello method called!", Utils.formatTime(this.myNode.getTime()));
-        return TimeProto.newBuilder().setTime(this.myNode.getLamportTime()).build();
 
         // Send an empty response
 //        responseObserver.onNext(Empty.getDefaultInstance());
@@ -183,7 +160,7 @@ public class NodeCommandsImpl implements NodeCommands{
                 TimeProto timeProto = this.myNode.getCommHub().getNext().preliminaryRequest(preliminaryRequestMessageProto);
                 Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
             } catch (Exception e){
-                this.nodeMissing(ProtobufMapper.AddressToProto(myNode.getNeighbours().next, this.myNode.getLamportTime()));
+                this.nodeMissing(ProtobufMapper.AddressToProto(myNode.getNeighbours().next));
             }
         }
         return TimeProto.newBuilder().setTime(this.myNode.getLamportTime()).build();
@@ -203,7 +180,7 @@ public class NodeCommandsImpl implements NodeCommands{
                 TimeProto timeProto = this.myNode.getCommHub().getNext().requestResource(requestResourceMessageProto);
                 Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
             } catch (Exception e){
-                this.nodeMissing(ProtobufMapper.AddressToProto(myNode.getNeighbours().next, this.myNode.getLamportTime()));
+                this.nodeMissing(ProtobufMapper.AddressToProto(myNode.getNeighbours().next));
             }
         }
         return TimeProto.newBuilder().setTime(this.myNode.getLamportTime()).build();
@@ -223,7 +200,7 @@ public class NodeCommandsImpl implements NodeCommands{
                 TimeProto timeProto = this.myNode.getCommHub().getNext().acquireResource(acquireMessageProto);
                 Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
             } catch (Exception e){
-                this.nodeMissing(ProtobufMapper.AddressToProto(myNode.getNeighbours().next, this.myNode.getLamportTime()));
+                this.nodeMissing(ProtobufMapper.AddressToProto(myNode.getNeighbours().next));
             }
 
         }
@@ -241,7 +218,7 @@ public class NodeCommandsImpl implements NodeCommands{
                 TimeProto timeProto = this.myNode.getCommHub().getNext().resourceWasReleased(resourceProto);
                 Utils.updateTimeOnReceive(timeProto.getTime(), this.myNode);
             } catch (Exception e){
-                this.nodeMissing(ProtobufMapper.AddressToProto(myNode.getNeighbours().next, this.myNode.getLamportTime()));
+                this.nodeMissing(ProtobufMapper.AddressToProto(myNode.getNeighbours().next));
             }
         }
         return TimeProto.newBuilder().setTime(this.myNode.getLamportTime()).build();

@@ -10,11 +10,10 @@ import cz.ctu.fee.dsv.grpc.resources.Resource;
 
 public class ProtobufMapper {
 
-    public static AddressProto AddressToProto(Address address, int time) {
+    public static AddressProto AddressToProto(Address address) {
         return AddressProto.newBuilder()
                 .setHostname(address.hostname)
                 .setPort(address.port)
-                .setTime(time)
                 .build();
     }
 
@@ -25,13 +24,12 @@ public class ProtobufMapper {
         );
     }
 
-    public static DSNeighboursProto DSNeighboursToProto(DSNeighbours dsNeighbours, int time) {
+    public static DSNeighboursProto DSNeighboursToProto(DSNeighbours dsNeighbours) {
         return DSNeighboursProto.newBuilder()
-                .setNext(AddressToProto(dsNeighbours.next, time))
-                .setNnext(AddressToProto(dsNeighbours.nnext, time))
-                .setPrev(AddressToProto(dsNeighbours.prev, time))
-                .setLeader(AddressToProto(dsNeighbours.leader, time))
-                .setTime(time)
+                .setNext(AddressToProto(dsNeighbours.next))
+                .setNnext(AddressToProto(dsNeighbours.nnext))
+                .setPrev(AddressToProto(dsNeighbours.prev))
+                .setLeader(AddressToProto(dsNeighbours.leader))
                 .build();
     }
 

@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -138,7 +139,8 @@ public class Node implements Runnable {
                 "resource:"+resource.getId()+", " +
                 "resourceIsFree:"+this.resource.isResourceFree()+", " +
                 "nodeStatus:" + this.nodeStatus.toString() +", "+
-                "isAlive:"+(getCommHub() == null?"null": getCommHub().isAlive())+
+                "isAlive:"+(getCommHub() == null?"null": getCommHub().isAlive())+ ", "+
+                "time:" + this.time+
 //                "otherNodeIP:'"+otherNodeIP+"', " +
 //                "otherNodePort:'"+otherNodePort+
                 "']";
@@ -209,7 +211,7 @@ public class Node implements Runnable {
         if (!myCommHub.isAlive()) throw new KilledNodeActsAsClientException("Node is not alive. Try to revive it.");
         try {
             CommandsGrpc.CommandsBlockingStub tmpNode = myCommHub.getGrpcProxy(new Address(otherNodeIP, otherNodePort));
-            DSNeighboursProto response = tmpNode.join(ProtobufMapper.AddressToProto(myAddress, getLamportTime()));
+            DSNeighboursProto response = tmpNode.join(ProtobufMapper.AddressToProto(myAddress));
             DSNeighbours neighboursResponse = ProtobufMapper.fromProtoToDSNeighbours(response);
             myNeighbours = neighboursResponse;
             myCommHub.setActNeighbours(myNeighbours);
@@ -234,7 +236,7 @@ public class Node implements Runnable {
             repairInProgress = true;
             {
                 try {
-                    myMessageReceiver.getNodeCommands().nodeMissing(ProtobufMapper.AddressToProto(missingNode, getLamportTime()));
+                    myMessageReceiver.getNodeCommands().nodeMissing(ProtobufMapper.AddressToProto(missingNode));
                 } catch (Exception e) {
                     // this should not happen
                     e.printStackTrace();
@@ -264,7 +266,7 @@ public class Node implements Runnable {
 
     public void leave(){
         try {
-            this.myMessageReceiver.getNodeCommands().nodeLeft(ProtobufMapper.AddressToProto(this.myAddress, getLamportTime()));
+            this.myMessageReceiver.getNodeCommands().nodeLeft(ProtobufMapper.AddressToProto(this.myAddress));
             this.resetNodeInTopology();
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -295,15 +297,37 @@ public class Node implements Runnable {
         }
     }
 
-    public void sendPreliminaryRequest(String resourceId) {
+    public void sendPreliminaryRequests(String resourceId) {
         try{
             this.myCommHub.getGrpcProxy(this.myAddress)
                     .preliminaryRequest(RequestResourceMessageProto.newBuilder()
                             .setResourceId(resourceId)
-                            .setRequesterAddress(ProtobufMapper.AddressToProto(this.myAddress, getLamportTime()))
+                            .setRequesterAddress(ProtobufMapper.AddressToProto(this.myAddress))
                             .build());
         } catch (Exception e) {
             repairTopology(myNeighbours.next);
+        }
+    }
+
+    public void sendPreliminaryRequests(List<String> resourceIds) {
+        int timestamp = getLamportTime();
+        logger.info("Timestamp of preliminary request: {}", timestamp);
+        int i = 0;
+        for (String resourceId : resourceIds) {
+            i += 1;
+            if (i == 2) {
+                this.sleepForDelay();
+            }
+            try{
+                this.myCommHub.getGrpcProxy(this.myAddress)
+                        .preliminaryRequest(RequestResourceMessageProto.newBuilder()
+                                .setResourceId(resourceId)
+                                .setRequesterAddress(ProtobufMapper.AddressToProto(this.myAddress))
+                                .setTime(timestamp)
+                                .build());
+            } catch (Exception e) {
+                repairTopology(myNeighbours.next);
+            }
         }
     }
 
@@ -333,7 +357,8 @@ public class Node implements Runnable {
         this.getCommHub().getGrpcProxy(this.myAddress).requestResource(RequestResourceMessageProto
                 .newBuilder()
                 .setResourceId(resourceId)
-                .setRequesterAddress(ProtobufMapper.AddressToProto(this.myAddress, getLamportTime()))
+                .setRequesterAddress(ProtobufMapper.AddressToProto(this.myAddress))
+                .setTime(getLamportTime())
                 .build());
     }
 

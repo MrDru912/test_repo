@@ -5,54 +5,113 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Graph {
     final Logger logger = LoggerFactory.getLogger(Graph.class);
 
-    private final Map<String, List<String>> adjacencyList;
+    private final Map<GraphNode, List<GraphNode>> adjacencyList;
 
     // Constructor to initialize the adjacency list
     public Graph() {
         adjacencyList = new HashMap<>();
     }
 
+    public void processPreliminaryRequest(GraphNode preliminaryRequester, GraphNode lastRequester, GraphNode resourceNode){
+        logger.info("Preliminary request in graph. preliminaryRequester:{}; lasstRequester:{}; resource:{}\n", preliminaryRequester, lastRequester, resourceNode);
+        GraphNode currentNode = lastRequester;
+        List<GraphNode> neighboursOfPreviousNode = null;
+        while(true){
+            logger.info("current node: {}; neighboursOfPreviousNode: {}", currentNode, neighboursOfPreviousNode);
+            if (preliminaryRequester.getTimestamp() < currentNode.getTimestamp()){
+                List<GraphNode> neighboursWithoutResource = adjacencyList.get(currentNode)
+                        .stream().filter(n -> !n.equals(resourceNode)).collect(Collectors.toList());
+                if (neighboursWithoutResource.isEmpty()){
+                    addEdge(currentNode, preliminaryRequester);
+                    break;
+                } else {
+                    currentNode = neighboursWithoutResource.get(0);
+                    neighboursOfPreviousNode = neighboursWithoutResource;
+                }
+            } else if (preliminaryRequester.getTimestamp() > currentNode.getTimestamp()){
+                /* changing dependant nodes of currentNode to become dependant on preliminaryRequester */
+                if (neighboursOfPreviousNode != null) {
+                    /* putting node after node with earlier timestamp */
+                    for (GraphNode neighbourOfPreviousNode : neighboursOfPreviousNode){
+                        addEdge(neighbourOfPreviousNode, preliminaryRequester);
+                        removeEdge(neighbourOfPreviousNode, currentNode);
+                    }
+                }
+                /* preliminaryRequester->currentNode */
+                addEdge(preliminaryRequester, currentNode);
+                break;
+            } else { /* compare based on node id */
+                if (preliminaryRequester.getId().compareTo(currentNode.getId()) < 0) {
+                    List<GraphNode> neighboursWithoutResource = adjacencyList.get(currentNode)
+                            .stream().filter(n -> !n.equals(resourceNode)).collect(Collectors.toList());
+                    if (neighboursWithoutResource.isEmpty()){
+                        addEdge(currentNode, preliminaryRequester);
+                        logger.info("< New dependency {}->{}", currentNode, preliminaryRequester);
+                        break;
+                    } else {
+                        currentNode = neighboursWithoutResource.get(0);
+                        neighboursOfPreviousNode = neighboursWithoutResource;
+                    }
+                } else {
+                    /* changing dependant nodes of currentNode to become dependant on preliminaryRequester */
+                    if (neighboursOfPreviousNode != null) {
+                        /* putting node after node with earlier timestamp */
+                        for (GraphNode neighbourOfPreviousNode : neighboursOfPreviousNode){
+                            addEdge(neighbourOfPreviousNode, preliminaryRequester);
+                            removeEdge(neighbourOfPreviousNode, currentNode);
+                        }
+                    }
+                    /* preliminaryRequester->currentNode */
+                    addEdge(preliminaryRequester, currentNode);
+                    logger.info("> New dependency {}->{}", preliminaryRequester, currentNode);
+                    break;
+                }
+            }
+        }
+    }
+
     // Method to add a new vertex to the graph
-    public void addVertex(String vertex) {
+    public void addVertex(GraphNode vertex) {
         adjacencyList.put(vertex, new ArrayList<>());
     }
 
     // Method to add an edge between two vertices
-    public void addEdge(String source, String destination) {
-        adjacencyList.get(source).add(destination);
+    public void addEdge(GraphNode source, GraphNode destination) {
+        List<GraphNode> neighbors = adjacencyList.get(source);
+        if (!neighbors.contains(destination)) { // Prevent duplicate edges
+            neighbors.add(destination);
+        }
     }
 
     // Method to remove a vertex from the graph
-    public void removeVertex(String vertex) {
+    public void removeVertex(GraphNode vertex) {
         adjacencyList.remove(vertex);
         // Remove the vertex from the neighbors of other vertices
-        for (List<String> neighbors : adjacencyList.values()) {
+        for (List<GraphNode> neighbors : adjacencyList.values()) {
             neighbors.remove(vertex);
         }
     }
 
     // Method to remove an edge between two vertices
-    public void removeEdge(String source, String destination) {
+    public void removeEdge(GraphNode source, GraphNode destination) {
         adjacencyList.get(source).remove(destination);
-
-        // For undirected graph, uncomment below line
-        // adjacencyList.get(destination).remove(source);
     }
 
     // Method to get the neighbors of a vertex
-    public List<String> getNeighbors(String vertex) {
+    public List<GraphNode> getNeighbors(GraphNode vertex) {
         return adjacencyList.get(vertex);
     }
 
     // Method to print the graph
     public void printGraph() {
-        for (Map.Entry<String, List<String>> entry : adjacencyList.entrySet()) {
+        for (Map.Entry<GraphNode, List<GraphNode>> entry : adjacencyList.entrySet()) {
             System.out.print(entry.getKey() + " -> ");
-            for (String neighbor : entry.getValue()) {
+            for (GraphNode neighbor : entry.getValue()) {
                 System.out.print(neighbor + " ");
             }
             System.out.println();
@@ -62,9 +121,9 @@ public class Graph {
 
     public String getStringGraph() {
         StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, List<String>> entry : adjacencyList.entrySet()) {
+        for (Map.Entry<GraphNode, List<GraphNode>> entry : adjacencyList.entrySet()) {
             sb.append(entry.getKey()).append(" -> [");
-            for (String neighbor : entry.getValue()) {
+            for (GraphNode neighbor : entry.getValue()) {
                 sb.append(neighbor).append(", ");
             }
             sb.append("]\n");
@@ -74,11 +133,11 @@ public class Graph {
 
     // Method to detect cycles in the graph
     public boolean hasCycle() {
-        Set<String> visited = new HashSet<>();
-        Set<String> recursionStack = new HashSet<>();
+        Set<GraphNode> visited = new HashSet<>();
+        Set<GraphNode> recursionStack = new HashSet<>();
 
         // Check for cycles starting from each unvisited vertex
-        for (String node : adjacencyList.keySet()) {
+        for (GraphNode node : adjacencyList.keySet()) {
             if (hasCycleUtil(node, visited, recursionStack)) {
                 return true;
             }
@@ -86,7 +145,7 @@ public class Graph {
         return false;
     }
 
-    private boolean hasCycleUtil(String node, Set<String> visited, Set<String> recursionStack) {
+    private boolean hasCycleUtil(GraphNode node, Set<GraphNode> visited, Set<GraphNode> recursionStack) {
         // If node is already in recursion stack, we found a cycle
         if (recursionStack.contains(node)) {
             return true;
@@ -102,7 +161,7 @@ public class Graph {
         recursionStack.add(node);
 
         // Visit all neighbors
-        for (String neighbor : adjacencyList.get(node)) {
+        for (GraphNode neighbor : adjacencyList.get(node)) {
             if (hasCycleUtil(neighbor, visited, recursionStack)) {
                 return true;
             }

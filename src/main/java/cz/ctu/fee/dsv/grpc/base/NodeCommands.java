@@ -8,13 +8,13 @@ import java.rmi.RemoteException;
 
 public interface NodeCommands {
         DSNeighboursProto join(AddressProto addr);
-        TimeProto chngNNext(AddressProto addr);
-        TimeProto chngNext(AddressProto addr);
+        void chngNNext(AddressProto addr);
+        void chngNext(AddressProto addr);
         AddressProto chngPrev(AddressProto addr);
-        TimeProto chngNNextOfPrev(AddressProto addr);
-        TimeProto nodeMissing(AddressProto addr);
-        TimeProto nodeLeft(AddressProto addrProto);
-        TimeProto hello();
+        void chngNNextOfPrev(AddressProto addr);
+        void nodeMissing(AddressProto addr);
+        void nodeLeft(AddressProto addrProto);
+        void hello();
         TimeProto preliminaryRequest(RequestResourceMessageProto requestMessageProto);
         TimeProto requestResource(RequestResourceMessageProto id);
         TimeProto acquireResource(AcquireMessageProto acquireResponseMessage);

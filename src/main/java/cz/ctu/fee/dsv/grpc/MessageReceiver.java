@@ -26,7 +26,6 @@ public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
     @Override
     public void join(AddressProto protoAddr,
                              io.grpc.stub.StreamObserver<cz.ctu.fee.dsv.DSNeighboursProto> responseObserver) {
-        Utils.updateTimeOnReceive(protoAddr.getTime(), this.myNode);
         DSNeighboursProto reply = nodeCommands.join(protoAddr);
         responseObserver.onNext(reply);
         responseObserver.onCompleted();
@@ -34,33 +33,30 @@ public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
 
     @Override
     public void chngNNextOfPrev(AddressProto addrProto,
-                          StreamObserver<TimeProto> responseObserver) {
-        Utils.updateTimeOnReceive(addrProto.getTime(), this.myNode);
-        TimeProto timeProto = nodeCommands.chngNNextOfPrev(addrProto);
+                          StreamObserver<Empty> responseObserver) {
+        nodeCommands.chngNNextOfPrev(addrProto);
         // Send an empty response
-        responseObserver.onNext(timeProto);
+        responseObserver.onNext(Empty.newBuilder().build());
         // Signal that the call is complete
         responseObserver.onCompleted();
     }
 
     @Override
     public void chngNNext(AddressProto addrProto,
-                          StreamObserver<TimeProto> responseObserver) {
-        Utils.updateTimeOnReceive(addrProto.getTime(), this.myNode);
-        TimeProto timeProto = nodeCommands.chngNNext(addrProto);
+                          StreamObserver<Empty> responseObserver) {
+        nodeCommands.chngNNext(addrProto);
         // Send an empty response
-        responseObserver.onNext(timeProto);
+        responseObserver.onNext(Empty.newBuilder().build());
         // Signal that the call is complete
         responseObserver.onCompleted();
     }
 
     @Override
     public void chngNext(AddressProto addrProto,
-                          StreamObserver<TimeProto> responseObserver) {
-        Utils.updateTimeOnReceive(addrProto.getTime(), this.myNode);
-        TimeProto timeProto = nodeCommands.chngNext(addrProto);
+                          StreamObserver<Empty> responseObserver) {
+        nodeCommands.chngNext(addrProto);
         // Send an empty response
-        responseObserver.onNext(timeProto);
+        responseObserver.onNext(Empty.newBuilder().build());
         // Signal that the call is complete
         responseObserver.onCompleted();
     }
@@ -69,7 +65,6 @@ public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
     @Override
     public void chngPrev(AddressProto addrProto,
             io.grpc.stub.StreamObserver<cz.ctu.fee.dsv.AddressProto> responseObserver) {
-        Utils.updateTimeOnReceive(addrProto.getTime(), this.myNode);
         AddressProto reply = nodeCommands.chngPrev(addrProto);
         responseObserver.onNext(reply);
         responseObserver.onCompleted();
@@ -78,11 +73,10 @@ public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
 
 
     @Override
-    public void nodeMissing(AddressProto addrProto, StreamObserver<TimeProto> responseObserver) {
-        Utils.updateTimeOnReceive(addrProto.getTime(), this.myNode);
-        TimeProto timeProto = nodeCommands.nodeMissing(addrProto);
+    public void nodeMissing(AddressProto addrProto, StreamObserver<Empty> responseObserver) {
+        nodeCommands.nodeMissing(addrProto);
         // Send an empty response
-        responseObserver.onNext(timeProto);
+        responseObserver.onNext(Empty.newBuilder().build());
         // Signal that the call is complete
         responseObserver.onCompleted();
     }
@@ -96,13 +90,13 @@ public class MessageReceiver extends CommandsGrpc.CommandsImplBase {
 
 
     @Override
-    public void hello(Empty request, StreamObserver<TimeProto> responseObserver) {
+    public void hello(Empty request, StreamObserver<Empty> responseObserver) {
 //        this.updateTimeOnReceive(addrProto.getTime()); #TODO add time message
 
 //        // Perform any logic you need (e.g., logging, updating state)
-        TimeProto timeProto = nodeCommands.hello();
+        nodeCommands.hello();
         // Send an empty response
-        responseObserver.onNext(timeProto);
+        responseObserver.onNext(Empty.newBuilder().build());
         // Signal that the call is complete
         responseObserver.onCompleted();
     }

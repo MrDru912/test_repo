@@ -9,13 +9,13 @@ package dsvcmds;
 import "google/protobuf/empty.proto";
 
 service Commands {
-  rpc chngNNext (AddressProto) returns (TimeProto) {}
-  rpc chngNext (AddressProto) returns (TimeProto) {}
+  rpc chngNNext (AddressProto) returns (google.protobuf.Empty) {}
+  rpc chngNext (AddressProto) returns (google.protobuf.Empty) {}
   rpc chngPrev (AddressProto) returns (AddressProto) {}
-  rpc nodeMissing (AddressProto) returns (TimeProto) {}
-  rpc hello (google.protobuf.Empty) returns (TimeProto){}
+  rpc nodeMissing (AddressProto) returns (google.protobuf.Empty) {}
+  rpc hello (google.protobuf.Empty) returns (google.protobuf.Empty){}
   rpc join (AddressProto) returns(DSNeighboursProto){}
-  rpc chngNNextOfPrev(AddressProto) returns(TimeProto) {}
+  rpc chngNNextOfPrev(AddressProto) returns(google.protobuf.Empty) {}
   rpc preliminaryRequest(RequestResourceMessageProto) returns(TimeProto) {}
   rpc requestResource(RequestResourceMessageProto) returns(TimeProto) {}
   rpc acquireResource(AcquireMessageProto) returns(TimeProto) {}
@@ -25,7 +25,6 @@ service Commands {
 message AddressProto {
   string hostname = 1;
   int32 port = 2;
-  int32 time = 3;
 }
 
 message DSNeighboursProto {
@@ -33,7 +32,6 @@ message DSNeighboursProto {
   AddressProto nnext = 2;
   AddressProto prev = 3;
   AddressProto leader = 4;
-  int32 time = 5;
 }
 
 message ResourceIdProto {

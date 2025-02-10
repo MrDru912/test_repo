@@ -3,6 +3,7 @@ package cz.ctu.fee.dsv.grpc.resources;
 import cz.ctu.fee.dsv.RequestResourceMessageProto;
 import cz.ctu.fee.dsv.ResourceProto;
 import cz.ctu.fee.dsv.grpc.lomet.Graph;
+import cz.ctu.fee.dsv.grpc.lomet.GraphNode;
 import cz.ctu.fee.dsv.grpc.mappers.ProtobufMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,34 +18,38 @@ public class Resource {
     private String id;
     private String data;
     private Graph graph;
-    private String lastPreliminaryRequesterId;
+    private GraphNode lastPreliminaryRequester;
     private LinkedList<RequestResourceMessageProto> delayedRequestsList = new LinkedList();
 
-    private String currentOwningProcessId;
+    private GraphNode currentOwningProcessId;
     private boolean resourceFree = true;
+    private GraphNode resourceNode;
 
     public Resource(String id, String data) {
         this.id = id;
         this.data = data;
         this.graph = new Graph();
-        this.graph.addVertex(id);
+        this.resourceNode = new GraphNode(id, -1);
+        this.graph.addVertex(resourceNode);
     }
 
 
     public boolean processRequest(RequestResourceMessageProto requestResourceMessageProto) {
         String requesterProcessId = getProcessId(requestResourceMessageProto.getRequesterAddress());
+        int timestamp = requestResourceMessageProto.getTime();
+        GraphNode requesterNode = new GraphNode(requesterProcessId, timestamp);
         logger.info("Processing request from " + requesterProcessId);
         if (this.isResourceFree()) {
             /* revert direction of process->resource edge to resource->process */
-            this.getGraph().removeEdge(requesterProcessId, this.getId());
-            this.getGraph().addEdge(this.getId(), requesterProcessId);
+            this.getGraph().removeEdge(requesterNode, this.resourceNode);
+            this.getGraph().addEdge(this.resourceNode, requesterNode);
             if (this.getGraph().hasCycle()){ /* refuse the request and keep it pending */
                 logger.info("Resource was not granted to {} " +
                         ".Resource request was delayed. Cycle was detected in the dependency graph on resource {}.",requesterProcessId, this.getId());
 
                 /* reverting direction of edge back */
-                this.getGraph().removeEdge(this.getId(), requesterProcessId);
-                this.getGraph().addEdge(requesterProcessId, this.getId());
+                this.getGraph().removeEdge(this.resourceNode, requesterNode);
+                this.getGraph().addEdge(requesterNode, this.resourceNode);
 
                 /* adding request to the delayed requests list to process it as the resource is released */
                 delayRequest(requestResourceMessageProto);
@@ -53,7 +58,7 @@ public class Resource {
             } else { /* granting the resource to the requester */
                 logger.info("Resource {} was granted to {}", this.getId(), requesterProcessId);
                 this.setResourceFree(false);
-                this.setCurrentOwningProcessId(requesterProcessId);
+                this.setCurrentOwningProcessId(new GraphNode(requesterProcessId, -1));
 
                 /* deleting request from delayed requests */
                 this.getDelayedRequestsList()
@@ -96,7 +101,7 @@ public class Resource {
             return request;
         } else {
             logger.info("No delayed requests to process");
-            this.setLastPreliminaryRequesterId(null);
+            this.setLastPreliminaryRequester(null);
             return null;
         }
     }
@@ -117,12 +122,12 @@ public class Resource {
         return graph;
     }
 
-    public String getLastPreliminaryRequesterId() {
-        return lastPreliminaryRequesterId;
+    public GraphNode getLastPreliminaryRequester() {
+        return lastPreliminaryRequester;
     }
 
-    public void setLastPreliminaryRequesterId(String lastPreliminaryRequesterId) {
-        this.lastPreliminaryRequesterId = lastPreliminaryRequesterId;
+    public void setLastPreliminaryRequester(GraphNode lastPreliminaryRequester) {
+        this.lastPreliminaryRequester = lastPreliminaryRequester;
     }
 
     public LinkedList<RequestResourceMessageProto> getDelayedRequestsList() {
@@ -141,34 +146,35 @@ public class Resource {
     public String toString() {
         return "Resource[" +
                 "id=" + id +
-                ", data=" + data + ", lastPreliminaryRequest: " + lastPreliminaryRequesterId + ", " + ']';
+                ", data=" + data + ", lastPreliminaryRequest: " + lastPreliminaryRequester + ", " + ']';
     }
 
     public void processPreliminaryRequest(RequestResourceMessageProto preliminaryRequestMessageProto) {
         String requesterId = getProcessId(
                 preliminaryRequestMessageProto.getRequesterAddress().getHostname(),
                 preliminaryRequestMessageProto.getRequesterAddress().getPort());
-
+        int preliminaryRequestTimestamp = preliminaryRequestMessageProto.getTime();
+        GraphNode requesterProcessNode = new GraphNode(requesterId, preliminaryRequestTimestamp);
+        logger.info("Processing preliminary request, requesterNode: {}.", requesterProcessNode);
         /* Adding dependency process->resource  */
-        this.getGraph().addVertex(requesterId);
-        this.getGraph().addEdge(requesterId, this.getId());
+        this.getGraph().addVertex(requesterProcessNode);
+        this.getGraph().addEdge(requesterProcessNode, this.resourceNode);
 
-        /* If some other process is dependent on the resource then adding dependency to that process */
-        String lastRequesterId = this.getLastPreliminaryRequesterId();
-        if (lastRequesterId != null) {
-            this.getGraph().addEdge(requesterId, lastRequesterId);
+        /* If some other process is dependent on the resource then adding dependency to the last process */
+        GraphNode lastRequester = this.getLastPreliminaryRequester();
+        if (lastRequester != null) {
+            graph.processPreliminaryRequest(requesterProcessNode ,lastRequester, this.resourceNode);
         }
-        this.setLastPreliminaryRequesterId(requesterId);
+        this.setLastPreliminaryRequester(requesterProcessNode);
 
-        logger.info("Preliminary request from {} was processed and dependency graph was updated.\n{}", requesterId, this.graph.getStringGraph());
-
+        logger.info("Preliminary request from {} was processed and dependency graph was updated.\n{}", requesterProcessNode, this.graph.getStringGraph());
     }
 
-    public String getCurrentOwningProcessId() {
+    public GraphNode getCurrentOwningProcessId() {
         return currentOwningProcessId;
     }
 
-    public void setCurrentOwningProcessId(String currentOwningProcessId) {
+    public void setCurrentOwningProcessId(GraphNode currentOwningProcessId) {
         this.currentOwningProcessId = currentOwningProcessId;
     }
 }

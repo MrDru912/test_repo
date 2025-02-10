@@ -5,6 +5,8 @@ import io.javalin.Javalin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 public class APIHandler {
     final Logger logger = LoggerFactory.getLogger(APIHandler.class);
 
@@ -27,29 +29,29 @@ public class APIHandler {
         this.app = Javalin.create()
                 .get("/setDelay/{delay}", ctx -> {
                     logger.info("Setting delay: {}", ctx.pathParam("delay"));
-                    myNode.setDelay(Integer.parseInt(ctx.pathParam("other_node_port")));
+                    myNode.setDelay(Integer.parseInt(ctx.pathParam("delay")));
                     ctx.result("Delay was set up. ip: " + myNode.getMyIP() + " port: " + myNode.getMyPort()+"\n");
                 })
                 .get("/join/{other_node_ip}/{other_node_port}", ctx -> {
-                    myNode.sleepForDelay();
+//                    myNode.sleepForDelay();
                     logger.info("Joining node: {}: {}", ctx.pathParam("other_node_ip"), ctx.pathParam("other_node_port"));
                     myNode.join(ctx.pathParam("other_node_ip"), Integer.parseInt(ctx.pathParam("other_node_port")));
                     ctx.result("Tried to join to: " + ctx.pathParam("other_node_ip") + " " + ctx.pathParam("other_node_port") + "\n");
                 })
                 .get("/leave", ctx -> {
-                    myNode.sleepForDelay();
+//                    myNode.sleepForDelay();
                     logger.info("Node is leaving. ip: {} port: {}", myNode.getMyIP(), myNode.getMyPort());
                     myNode.leave();
                     ctx.result("Node left. ip: " + myNode.getMyIP() + " port: " + myNode.getMyPort()+"\n");
                 })
                 .get("/kill", ctx -> {
-                    myNode.sleepForDelay();
+//                    myNode.sleepForDelay();
                     logger.info("Node is being killed. ip: {} port: {}", myNode.getMyIP(), myNode.getMyPort());
                     myNode.kill();
                     ctx.result("Node was killed. ip: " + myNode.getMyIP() + " port: " + myNode.getMyPort()+"\n");
                 })
                 .get("/revive", ctx -> {
-                    myNode.sleepForDelay();
+//                    myNode.sleepForDelay();
                     logger.info("Node is being revived. ip: {} port: {}", myNode.getMyIP(), myNode.getMyPort());
                     try {
                         myNode.revive();
@@ -59,17 +61,30 @@ public class APIHandler {
                     }
                 })
                 .get("/preliminary_request/{resource_id}", ctx -> {
-                    myNode.sleepForDelay();
+//                    myNode.sleepForDelay();
                     logger.info("Sending preliminary request from {} to get {}.", myNode.getAddress(), ctx.pathParam("resource_id"));
-                    myNode.sendPreliminaryRequest(ctx.pathParam("resource_id"));
+                    myNode.sendPreliminaryRequests(ctx.pathParam("resource_id"));
+                })
+                .post("/preliminary_requests", ctx -> {
+//                    myNode.sleepForDelay();
+                    List<String> resourceIds = ctx.bodyAsClass(List.class);
+                    StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.append("Sending preliminary request from ").append(myNode.getAddress())
+                            .append(" to get ");
+                    for (String resourceId : resourceIds) {
+                        stringBuilder.append("[").append(resourceId).append(" ], ");
+                    }
+                    logger.info(stringBuilder.toString());
+                    myNode.sendPreliminaryRequests(resourceIds);
+
                 })
                 .get("/request_resource/{resource_id}", ctx -> {
-                    myNode.sleepForDelay();
-                    logger.info("Sending request to get {}. ip: {} port: {}", ctx.pathParam("resource_id"), myNode.getMyIP(), myNode.getMyPort());
+//                    myNode.sleepForDelay();
+                    logger.info("Sending request to get {}. {}", ctx.pathParam("resource_id"), myNode.getAddress());
                     myNode.requestResource(ctx.pathParam("resource_id"));
                 })
                 .get("/release_resource/{resource_id}", ctx -> {
-                    logger.info("Sending release source {}. ip: {} port: {}", ctx.pathParam("resource_id"), myNode.getMyIP(), myNode.getMyPort());
+                    logger.info("Sending release source {}. {}", ctx.pathParam("resource_id"), myNode.getAddress());
                     try{
                         myNode.sleepForDelay();
                         myNode.releaseResource(ctx.pathParam("resource_id"));
