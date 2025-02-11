@@ -50,7 +50,17 @@ for url in "${urls[@]}"; do
     sleep 1  # Delay of 1 second between requests
 done
 
-curl -X GET "http://${p1}/setDelay/10000" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X POST "$url" -H "Content-Type: application/json" -d '["127.0.0.1:2030_R", "127.0.0.1:2050_R"]' -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://$p2/setDelay/10000" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X POST "http://$p2/preliminary_requests" -H "Content-Type: application/json" -d "[\"$r3\", \"$r5\"]" -s -o /dev/null -w "Status: %{http_code}\n" &
+curl -X POST "http://$p4/preliminary_requests" -H "Content-Type: application/json" -d "[\"$r3\", \"$r5\"]" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://$p2/setDelay/0" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://$p4/request_resource/$r3" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://$p4/request_resource/$r5" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://$p2/request_resource/$r3" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://$p2/request_resource/$r5" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://$p2/release_resource/$r3" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://$p2/release_resource/$r5" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://$p4/release_resource/$r3" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://$p4/release_resource/$r5" -s -o /dev/null -w "Status: %{http_code}\n"
 
 echo "All requests completed."
