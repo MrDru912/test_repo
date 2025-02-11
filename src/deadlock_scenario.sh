@@ -17,7 +17,7 @@ p4_port=2040
 p4_api_port=$((p4_port + 5000))
 
 p5_hostname="192.168.56.108"
-p5_port=2040
+p5_port=2050
 p5_api_port=$((p5_port + 5000))
 
 # Define variables for processes
@@ -50,17 +50,24 @@ for url in "${urls[@]}"; do
     sleep 1  # Delay of 1 second between requests
 done
 
-curl -X GET "http://$p2/setDelay/10000" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X POST "http://$p2/preliminary_requests" -H "Content-Type: application/json" -d "[\"$r3\", \"$r5\"]" -s -o /dev/null -w "Status: %{http_code}\n" &
-curl -X POST "http://$p4/preliminary_requests" -H "Content-Type: application/json" -d "[\"$r3\", \"$r5\"]" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X GET "http://$p2/setDelay/0" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X GET "http://$p4/request_resource/$r3" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X GET "http://$p4/request_resource/$r5" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X GET "http://$p2/request_resource/$r3" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X GET "http://$p2/request_resource/$r5" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X GET "http://$p2/release_resource/$r3" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X GET "http://$p2/release_resource/$r5" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X GET "http://$p4/release_resource/$r3" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X GET "http://$p4/release_resource/$r5" -s -o /dev/null -w "Status: %{http_code}\n"
+
+
+curl -X GET "http://192.168.56.106:7020/join/192.168.56.105/2010" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.107:7030/join/192.168.56.106/2020" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.109:7040/join/192.168.56.107/2030" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.108:2050/join/192.168.56.109/2040" -s -o /dev/null -w "Status: %{http_code}\n"
+
+curl -X GET "http://192.168.56.106:7020/setDelay/10000" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X POST "http://192.168.56.106:7020/preliminary_requests" -H "Content-Type: application/json" -d "[\"192.168.56.107:2030_R\", \"192.168.56.108:2050_R\"]" -s -o /dev/null -w "Status: %{http_code}\n" &
+curl -X POST "http://192.168.56.109:7040/preliminary_requests" -H "Content-Type: application/json" -d "[\"192.168.56.107:2030_R\", \"192.168.56.108:2050_R\"]" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.106:7020/setDelay/0" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.109:7040/request_resource/192.168.56.107:2030_R" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.109:7040/request_resource/192.168.56.108:2050_R" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.106:7020/request_resource/192.168.56.107:2030_R" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.106:7020/request_resource/192.168.56.108:2050_R" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.106:7020/release_resource/192.168.56.107:2030_R" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.106:7020/release_resource/192.168.56.108:2050_R" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.109:7040/release_resource/192.168.56.107:2030_R" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.109:7040/release_resource/192.168.56.108:2050_R" -s -o /dev/null -w "Status: %{http_code}\n"
 
 echo "All requests completed."
