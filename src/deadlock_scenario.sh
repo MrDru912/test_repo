@@ -55,7 +55,7 @@ done
 curl -X GET "http://192.168.56.106:7020/join/192.168.56.105/2010" -s -o /dev/null -w "Status: %{http_code}\n"
 curl -X GET "http://192.168.56.107:7030/join/192.168.56.106/2020" -s -o /dev/null -w "Status: %{http_code}\n"
 curl -X GET "http://192.168.56.109:7040/join/192.168.56.107/2030" -s -o /dev/null -w "Status: %{http_code}\n"
-curl -X GET "http://192.168.56.108:2050/join/192.168.56.109/2040" -s -o /dev/null -w "Status: %{http_code}\n"
+curl -X GET "http://192.168.56.108:7050/join/192.168.56.109/2040" -s -o /dev/null -w "Status: %{http_code}\n"
 
 curl -X GET "http://192.168.56.106:7020/setDelay/10000" -s -o /dev/null -w "Status: %{http_code}\n"
 curl -X POST "http://192.168.56.106:7020/preliminary_requests" -H "Content-Type: application/json" -d "[\"192.168.56.107:2030_R\", \"192.168.56.108:2050_R\"]" -s -o /dev/null -w "Status: %{http_code}\n" &
